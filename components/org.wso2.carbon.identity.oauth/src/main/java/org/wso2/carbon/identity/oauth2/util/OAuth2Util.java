@@ -18,16 +18,7 @@
 
 package org.wso2.carbon.identity.oauth2.util;
 
-import com.nimbusds.jose.Algorithm;
-import com.nimbusds.jose.EncryptionMethod;
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWEAlgorithm;
-import com.nimbusds.jose.JWEEncrypter;
-import com.nimbusds.jose.JWEHeader;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.JWSSigner;
-import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
@@ -50,6 +41,7 @@ import org.apache.oltu.oauth2.common.message.types.ResponseType;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.core.util.KeyStoreManager;
+import org.wso2.carbon.crypto.api.CryptoContext;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -57,11 +49,7 @@ import org.wso2.carbon.identity.application.common.util.IdentityApplicationConst
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.base.IdentityConstants;
 import org.wso2.carbon.identity.base.IdentityException;
-import org.wso2.carbon.identity.core.util.IdentityConfigParser;
-import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
-import org.wso2.carbon.identity.core.util.IdentityIOStreamUtils;
-import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
-import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.core.util.*;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
@@ -85,6 +73,8 @@ import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
+import org.wso2.carbon.identity.oauth2.util.cryptoutil.CryptoServiceBasedRSASigner;
+import org.wso2.carbon.identity.oauth2.util.cryptoutil.CryptoServiceBasedRSAVerifier;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.registry.core.Resource;
@@ -97,6 +87,10 @@ import org.wso2.carbon.utils.CarbonUtils;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
 
+import javax.xml.namespace.QName;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -116,22 +110,10 @@ import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.sql.Timestamp;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Enumeration;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.xml.namespace.QName;
-import javax.xml.stream.XMLInputFactory;
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamReader;
 
 /**
  * Utility methods for OAuth 2.0 implementation
@@ -148,6 +130,7 @@ public class OAuth2Util {
     public static final String ENABLE_OPENID_CONNECT_AUDIENCES = "EnableAudiences";
     public static final String OPENID_CONNECT_AUDIENCE = "audience";
     private static final String DOT_SEPARATER = ".";
+    private static final String CRYPTO_SERVICE_ENABLING_PROPERTY_PATH = "CryptoService.Enabled";
 
     public static final String DEFAULT_TOKEN_TYPE = "Default";
 
@@ -1495,7 +1478,7 @@ public class OAuth2Util {
      * @throws InvalidOAuthClientException
      */
     public static OauthTokenIssuer getOAuthTokenIssuerForOAuthApp(String clientId)
-            throws  IdentityOAuth2Exception, InvalidOAuthClientException {
+            throws IdentityOAuth2Exception, InvalidOAuthClientException {
 
         OAuthAppDO appDO = null;
         try {
@@ -1821,19 +1804,16 @@ public class OAuth2Util {
                 return false;
             }
             int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-            RSAPublicKey publicKey;
-            KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
-
-            if (!tenantDomain.equals(org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
-                String ksName = tenantDomain.trim().replace(".", "-");
-                String jksName = ksName + ".jks";
-                publicKey = (RSAPublicKey) keyStoreManager.getKeyStore(jksName).getCertificate(tenantDomain)
-                        .getPublicKey();
+            JWSVerifier verifier;
+            CryptoContext cryptoContext = CryptoContext.buildEmptyContext(tenantId, tenantDomain);
+            RSAPublicKey publicKey = (RSAPublicKey)
+                    OAuth2ServiceComponentHolder.getCryptoService().getCertificate(cryptoContext).getPublicKey();
+            if (!isCryptoServiceEnabled()) {
+                verifier = new CryptoServiceBasedRSAVerifier(cryptoContext, "BC");
             } else {
-                publicKey = (RSAPublicKey) keyStoreManager.getDefaultPublicKey();
+                verifier = new RSASSAVerifier(publicKey);
             }
             SignedJWT signedJWT = SignedJWT.parse(idToken);
-            JWSVerifier verifier = new RSASSAVerifier(publicKey);
 
             return signedJWT.verify(verifier);
         } catch (JOSEException | ParseException e) {
@@ -1992,10 +1972,15 @@ public class OAuth2Util {
                 log.debug("Signing JWT using the algorithm: " + signatureAlgorithm + " & key of the tenant: " +
                         tenantDomain);
             }
-
+            JWSSigner signer;
             int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-            Key privateKey = getPrivateKey(tenantDomain, tenantId);
-            JWSSigner signer = new RSASSASigner((RSAPrivateKey) privateKey);
+            if (!isCryptoServiceEnabled()) {
+                Key privateKey = getPrivateKey(tenantDomain, tenantId);
+                signer = new RSASSASigner((RSAPrivateKey) privateKey);
+            } else {
+                signer = new CryptoServiceBasedRSASigner(CryptoContext.buildEmptyContext(tenantId, tenantDomain),
+                        "BC");
+            }
             JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
             headerBuilder.keyID(getThumbPrint(tenantDomain, tenantId));
             headerBuilder.x509CertThumbprint(new Base64URL(getThumbPrint(tenantDomain, tenantId)));
@@ -2398,7 +2383,7 @@ public class OAuth2Util {
      * Return true if the token identifier is JWT.
      *
      * @param tokenIdentifier String JWT token identifier.
-     * @return  true for a JWT token.
+     * @return true for a JWT token.
      */
     public static boolean isJWT(String tokenIdentifier) {
         // JWT token contains 3 base64 encoded components separated by periods.
@@ -2409,7 +2394,7 @@ public class OAuth2Util {
      * Return true if the JWT id token is encrypted.
      *
      * @param idToken String JWT ID token.
-     * @return  Boolean state of encryption.
+     * @return Boolean state of encryption.
      */
     public static boolean isIDTokenEncrypted(String idToken) {
         // Encrypted ID token contains 5 base64 encoded components separated by periods.
@@ -2439,6 +2424,21 @@ public class OAuth2Util {
         }
         return oauthTokenIssuer;
     }
-    
+
+    protected static boolean isCryptoServiceEnabled() {
+        String enabled = OAuth2ServiceComponentHolder.getServerConfigurationService().
+                getFirstProperty(CRYPTO_SERVICE_ENABLING_PROPERTY_PATH);
+
+        if (!StringUtils.isBlank(enabled)) {
+
+            if (StringUtils.equals(enabled, "true")) {
+
+                return true;
+            }
+            return false;
+        }
+        return false;
+    }
+
 }
 

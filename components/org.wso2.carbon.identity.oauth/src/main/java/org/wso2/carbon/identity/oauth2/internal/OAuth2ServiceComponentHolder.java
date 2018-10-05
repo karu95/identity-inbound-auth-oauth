@@ -18,6 +18,8 @@
 
 package org.wso2.carbon.identity.oauth2.internal;
 
+import org.wso2.carbon.base.api.ServerConfigurationService;
+import org.wso2.carbon.crypto.api.CryptoService;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.core.handler.HandlerComparator;
@@ -40,6 +42,8 @@ public class OAuth2ServiceComponentHolder {
     private static AuthenticationMethodNameTranslator authenticationMethodNameTranslator;
     private static List<OAuthClientAuthenticator> authenticationHandlers = new ArrayList<>();
     private static List<ClaimProvider> claimProviders = new ArrayList<>();
+    private static CryptoService cryptoService;
+    private static ServerConfigurationService serverConfigurationService;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -142,6 +146,30 @@ public class OAuth2ServiceComponentHolder {
      */
     public static void unregisterClaimProvider(ClaimProvider claimProvider) {
         claimProviders.remove(claimProvider);
+    }
+
+    public static void setCryptoService(CryptoService cryptoService) {
+        OAuth2ServiceComponentHolder.cryptoService = cryptoService;
+    }
+
+    public static CryptoService getCryptoService() {
+        return OAuth2ServiceComponentHolder.cryptoService;
+    }
+
+    public static void unsetCryptoService() {
+        OAuth2ServiceComponentHolder.cryptoService = null;
+    }
+
+    public static ServerConfigurationService getServerConfigurationService() {
+        return serverConfigurationService;
+    }
+
+    public static void setServerConfigurationService(ServerConfigurationService serverConfigurationService) {
+        OAuth2ServiceComponentHolder.serverConfigurationService = serverConfigurationService;
+    }
+
+    public static void unsetServerConfigurationService() {
+        OAuth2ServiceComponentHolder.serverConfigurationService = null;
     }
 
 }

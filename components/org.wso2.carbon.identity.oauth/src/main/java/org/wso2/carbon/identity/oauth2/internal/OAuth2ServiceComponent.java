@@ -27,7 +27,9 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.wso2.carbon.base.api.ServerConfigurationService;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
+import org.wso2.carbon.crypto.api.CryptoService;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
@@ -41,6 +43,7 @@ import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
 import org.wso2.carbon.identity.oauth2.client.authentication.BasicAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.client.authentication.OAuthClientAuthnService;
+import org.wso2.carbon.identity.oauth2.client.authentication.PublicClientAuthenticator;
 import org.wso2.carbon.identity.oauth2.dao.OAuthTokenPersistenceFactory;
 import org.wso2.carbon.identity.oauth2.dao.SQLQueries;
 import org.wso2.carbon.identity.oauth2.listener.TenantCreationEventListener;
@@ -50,7 +53,6 @@ import org.wso2.carbon.identity.openidconnect.OpenIDConnectClaimFilterImpl;
 import org.wso2.carbon.identity.user.store.configuration.listener.UserStoreConfigListener;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.stratos.common.listeners.TenantMgtListener;
-import org.wso2.carbon.identity.oauth2.client.authentication.PublicClientAuthenticator;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -321,5 +323,38 @@ public class OAuth2ServiceComponent {
             log.debug("UnSetting the Registry Service");
         }
         OAuth2ServiceComponentHolder.getAuthenticationHandlers().remove(oAuthClientAuthenticator);
+    }
+
+    @Reference(
+            name = "cryptoService",
+            service = CryptoService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "unsetCryptoService"
+    )
+    protected void setCryptoService(CryptoService cryptoService){
+
+        OAuth2ServiceComponentHolder.setCryptoService(cryptoService);
+    }
+
+    protected void unsetCryptoService(CryptoService cryptoService){
+
+        OAuth2ServiceComponentHolder.unsetCryptoService();
+    }
+
+    @Reference(
+            name = "serverConfigurationService",
+            service = ServerConfigurationService.class,
+            cardinality = ReferenceCardinality.MANDATORY,
+            unbind = "unsetServerConfigurationService"
+    )
+    public void setServerConfigurationService(ServerConfigurationService serverConfigurationService) {
+
+        OAuth2ServiceComponentHolder.setServerConfigurationService(serverConfigurationService);
+    }
+
+    public void unsetServerConfigurationService(ServerConfigurationService serverConfigurationService) {
+
+        OAuth2ServiceComponentHolder.unsetServerConfigurationService();
     }
 }
