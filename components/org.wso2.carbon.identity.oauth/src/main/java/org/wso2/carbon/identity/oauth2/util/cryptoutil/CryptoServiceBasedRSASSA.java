@@ -8,7 +8,7 @@ import java.util.Set;
 
 public class CryptoServiceBasedRSASSA {
 
-    private static final Set<JWSAlgorithm> algorithms = new LinkedHashSet<JWSAlgorithm>(){{
+    private static final Set<JWSAlgorithm> algorithms = new LinkedHashSet<JWSAlgorithm>() {{
         add(JWSAlgorithm.RS256);
         add(JWSAlgorithm.RS384);
         add(JWSAlgorithm.RS512);

@@ -332,12 +332,12 @@ public class OAuth2ServiceComponent {
             policy = ReferencePolicy.DYNAMIC,
             unbind = "unsetCryptoService"
     )
-    protected void setCryptoService(CryptoService cryptoService){
+    protected void setCryptoService(CryptoService cryptoService) {
 
         OAuth2ServiceComponentHolder.setCryptoService(cryptoService);
     }
 
-    protected void unsetCryptoService(CryptoService cryptoService){
+    protected void unsetCryptoService(CryptoService cryptoService) {
 
         OAuth2ServiceComponentHolder.unsetCryptoService();
     }
