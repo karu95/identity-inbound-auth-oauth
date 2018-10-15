@@ -1805,12 +1805,22 @@ public class OAuth2Util {
             }
             int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
             JWSVerifier verifier;
-            CryptoContext cryptoContext = CryptoContext.buildEmptyContext(tenantId, tenantDomain);
-            RSAPublicKey publicKey = (RSAPublicKey)
-                    OAuth2ServiceComponentHolder.getCryptoService().getCertificate(cryptoContext).getPublicKey();
+
             if (!isCryptoServiceEnabled()) {
+                CryptoContext cryptoContext = CryptoContext.buildEmptyContext(tenantId, tenantDomain);
                 verifier = new CryptoServiceBasedRSAVerifier(cryptoContext, "BC");
             } else {
+                RSAPublicKey publicKey;
+                KeyStoreManager keyStoreManager = KeyStoreManager.getInstance(tenantId);
+
+                if (!tenantDomain.equals(org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_DOMAIN_NAME)) {
+                    String ksName = tenantDomain.trim().replace(".", "-");
+                    String jksName = ksName + ".jks";
+                    publicKey = (RSAPublicKey) keyStoreManager.getKeyStore(jksName).getCertificate(tenantDomain)
+                            .getPublicKey();
+                } else {
+                    publicKey = (RSAPublicKey) keyStoreManager.getDefaultPublicKey();
+                }
                 verifier = new RSASSAVerifier(publicKey);
             }
             SignedJWT signedJWT = SignedJWT.parse(idToken);
