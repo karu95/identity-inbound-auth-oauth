@@ -13,12 +13,21 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 
 import java.util.Set;
 
+/**
+ * Implementation of {@link JWSSigner} based on Carbon Crypto Service.
+ */
 public class CryptoServiceBasedRSASigner implements JWSSigner {
 
     private final CryptoContext cryptoContext;
     private final String jceProvider;
     private CryptoService cryptoService;
 
+    /**
+     *
+     *
+     * @param cryptoContext
+     * @param jceProvider
+     */
     public CryptoServiceBasedRSASigner(CryptoContext cryptoContext, String jceProvider) {
 
         this.jceProvider = jceProvider;
@@ -28,6 +37,14 @@ public class CryptoServiceBasedRSASigner implements JWSSigner {
         }
     }
 
+    /**
+     *
+     *
+     * @param jwsHeader
+     * @param dataToBeSigned
+     * @return
+     * @throws JOSEException
+     */
     @Override
     public Base64URL sign(JWSHeader jwsHeader, byte[] dataToBeSigned) throws JOSEException {
 
@@ -41,6 +58,10 @@ public class CryptoServiceBasedRSASigner implements JWSSigner {
         }
     }
 
+    /**
+     *
+     * @return
+     */
     @Override
     public Set<JWSAlgorithm> supportedJWSAlgorithms() {
 

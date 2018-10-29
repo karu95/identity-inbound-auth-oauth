@@ -22,12 +22,14 @@ import com.nimbusds.jose.Algorithm;
 import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWEAlgorithm;
+import com.nimbusds.jose.JWEDecrypter;
 import com.nimbusds.jose.JWEEncrypter;
 import com.nimbusds.jose.JWEHeader;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.JWSVerifier;
+import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
@@ -51,6 +53,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.wso2.carbon.core.util.KeyStoreManager;
 import org.wso2.carbon.crypto.api.CryptoContext;
+import org.wso2.carbon.crypto.api.CryptoException;
+import org.wso2.carbon.crypto.api.CryptoService;
 import org.wso2.carbon.identity.application.authentication.framework.model.AuthenticatedUser;
 import org.wso2.carbon.identity.application.common.IdentityApplicationManagementException;
 import org.wso2.carbon.identity.application.common.model.ServiceProvider;
@@ -86,6 +90,8 @@ import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
+import org.wso2.carbon.identity.oauth2.util.cryptoutil.CryptoServiceBasedRSADecrypter;
+import org.wso2.carbon.identity.oauth2.util.cryptoutil.CryptoServiceBasedRSAEncrypter;
 import org.wso2.carbon.identity.oauth2.util.cryptoutil.CryptoServiceBasedRSASigner;
 import org.wso2.carbon.identity.oauth2.util.cryptoutil.CryptoServiceBasedRSAVerifier;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
@@ -1926,7 +1932,16 @@ public class OAuth2Util {
                 }
             }
 
-            Certificate publicCert = getX509CertOfOAuthApp(clientId, spTenantDomain);
+            Certificate publicCert;
+            int tenantId = IdentityTenantUtil.getTenantId(spTenantDomain);
+            if (isCryptoServiceEnabled()) {
+                CryptoService cryptoService = OAuth2ServiceComponentHolder.getCryptoService();
+                publicCert = cryptoService.getCertificate(new CryptoContext(tenantId, spTenantDomain,
+                        null, clientId, null, null));
+            } else {
+                publicCert = getX509CertOfOAuthApp(clientId, spTenantDomain);
+            }
+
             Key publicKey = publicCert.getPublicKey();
 
             JWEHeader.Builder headerBuilder = new JWEHeader.Builder(encryptionAlgorithm, encryptionMethod);
@@ -1941,11 +1956,17 @@ public class OAuth2Util {
                         encryptionMethod + ", tenant: " + spTenantDomain + " & header: " + header.toString());
             }
 
-            JWEEncrypter encrypter = new RSAEncrypter((RSAPublicKey) publicKey);
+            JWEEncrypter encrypter;
+            if (isCryptoServiceEnabled()) {
+                encrypter = new CryptoServiceBasedRSAEncrypter(new CryptoContext(tenantId, spTenantDomain,
+                        null, clientId, null, null), "BC");
+            } else {
+                 encrypter = new RSAEncrypter((RSAPublicKey) publicKey);
+            }
             encryptedJWT.encrypt(encrypter);
 
             return encryptedJWT;
-        } catch (JOSEException | NoSuchAlgorithmException | CertificateEncodingException e) {
+        } catch (JOSEException | NoSuchAlgorithmException | CertificateEncodingException | CryptoException e) {
             throw new IdentityOAuth2Exception("Error occurred while encrypting JWT for the client_id: " + clientId
                     + " with the tenant domain: " + spTenantDomain, e);
         }
@@ -2457,18 +2478,8 @@ public class OAuth2Util {
     }
 
     protected static boolean isCryptoServiceEnabled() {
-        String enabled = OAuth2ServiceComponentHolder.getServerConfigurationService().
-                getFirstProperty(CRYPTO_SERVICE_ENABLING_PROPERTY_PATH);
 
-        if (!StringUtils.isBlank(enabled)) {
-
-            if (StringUtils.equals(enabled, "true")) {
-
-                return true;
-            }
-            return false;
-        }
-        return false;
+        return OAuthServerConfiguration.getInstance().getCryptoServiceEnabled();
     }
 
 }

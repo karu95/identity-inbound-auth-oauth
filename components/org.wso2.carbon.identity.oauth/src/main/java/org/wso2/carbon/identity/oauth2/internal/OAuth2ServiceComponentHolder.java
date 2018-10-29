@@ -43,7 +43,6 @@ public class OAuth2ServiceComponentHolder {
     private static List<OAuthClientAuthenticator> authenticationHandlers = new ArrayList<>();
     private static List<ClaimProvider> claimProviders = new ArrayList<>();
     private static CryptoService cryptoService;
-    private static ServerConfigurationService serverConfigurationService;
 
     private OAuth2ServiceComponentHolder() {
 
@@ -159,17 +158,4 @@ public class OAuth2ServiceComponentHolder {
     public static void unsetCryptoService() {
         OAuth2ServiceComponentHolder.cryptoService = null;
     }
-
-    public static ServerConfigurationService getServerConfigurationService() {
-        return serverConfigurationService;
-    }
-
-    public static void setServerConfigurationService(ServerConfigurationService serverConfigurationService) {
-        OAuth2ServiceComponentHolder.serverConfigurationService = serverConfigurationService;
-    }
-
-    public static void unsetServerConfigurationService() {
-        OAuth2ServiceComponentHolder.serverConfigurationService = null;
-    }
-
 }

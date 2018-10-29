@@ -6,7 +6,10 @@ import com.nimbusds.jose.JWSAlgorithm;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-public class CryptoServiceBasedRSASSA {
+/**
+ *
+ */
+class CryptoServiceBasedRSASSA {
 
     private static final Set<JWSAlgorithm> algorithms = new LinkedHashSet<JWSAlgorithm>() {{
         add(JWSAlgorithm.RS256);
@@ -17,7 +20,7 @@ public class CryptoServiceBasedRSASSA {
         add(JWSAlgorithm.PS512);
     }};
 
-    protected static String getSignVerifyAlgorithm(JWSAlgorithm alg) throws JOSEException {
+    static String getSignVerifyAlgorithm(JWSAlgorithm alg) throws JOSEException {
 
         if (alg.equals(JWSAlgorithm.RS256)) {
             return "SHA256withRSA";
@@ -38,7 +41,11 @@ public class CryptoServiceBasedRSASSA {
         }
     }
 
-    public static Set<JWSAlgorithm> getSupportedAlgorithms() {
+    /**
+     *
+     * @return
+     */
+    static Set<JWSAlgorithm> getSupportedAlgorithms() {
         return algorithms;
     }
 

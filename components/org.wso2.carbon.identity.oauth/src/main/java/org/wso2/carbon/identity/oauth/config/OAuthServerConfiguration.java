@@ -64,6 +64,8 @@ import org.wso2.carbon.identity.openidconnect.RequestObjectValidator;
 import org.wso2.carbon.identity.openidconnect.RequestObjectValidatorImpl;
 import org.wso2.carbon.utils.CarbonUtils;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.xml.namespace.QName;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -74,8 +76,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import javax.servlet.http.HttpServletRequest;
-import javax.xml.namespace.QName;
 
 /**
  * Runtime representation of the OAuth Configuration as configured through
@@ -176,6 +176,7 @@ public class OAuthServerConfiguration {
     private List<String> supportedIdTokenEncryptionMethods = new ArrayList<>();
     private String userInfoJWTSignatureAlgorithm = "SHA256withRSA";
     private String authContextTTL = "15L";
+    private boolean cryptoServiceEnabled = false;
     // property added to fix IDENTITY-4551 in backward compatible manner
     private boolean useMultiValueSeparatorForAuthContextToken = true;
 
@@ -370,6 +371,9 @@ public class OAuthServerConfiguration {
         // read hash mode config
         parseEnableHashMode(oauthElem);
 
+        // read CryptoService config
+        parseEnableCryptoService(oauthElem);
+
         // Read the value of retain Access Tokens config. If true old token will be stored in Audit table else drop it.
         parseRetainOldAccessTokensConfig(oauthElem);
 
@@ -545,10 +549,11 @@ public class OAuthServerConfiguration {
     }
 
     public boolean useRetainOldAccessTokens() {
-        return ((retainOldAccessTokens != null) && Boolean.TRUE.toString().equalsIgnoreCase(retainOldAccessTokens))  ? true : false;
+        return ((retainOldAccessTokens != null) && Boolean.TRUE.toString().equalsIgnoreCase(retainOldAccessTokens)) ? true : false;
     }
+
     public boolean isTokenCleanupEnabled() {
-        return ((tokenCleanupFeatureEnable != null) && Boolean.TRUE.toString().equalsIgnoreCase(tokenCleanupFeatureEnable))  ? true : false;
+        return ((tokenCleanupFeatureEnable != null) && Boolean.TRUE.toString().equalsIgnoreCase(tokenCleanupFeatureEnable)) ? true : false;
     }
 
     public String getOIDCConsentPageUrl() {
@@ -999,6 +1004,8 @@ public class OAuthServerConfiguration {
     public boolean isUseMultiValueSeparatorForAuthContextToken() {
         return useMultiValueSeparatorForAuthContextToken;
     }
+
+    public boolean getCryptoServiceEnabled() { return cryptoServiceEnabled; }
 
     public TokenPersistenceProcessor getPersistenceProcessor() throws IdentityOAuth2Exception {
         if (persistenceProcessor == null) {
@@ -1988,6 +1995,7 @@ public class OAuthServerConfiguration {
 
     /**
      * Adds oauth token issuer instances used for token generation.
+     *
      * @param tokenType registered token type
      * @return token issuer instance
      * @throws IdentityOAuth2Exception
@@ -2522,6 +2530,22 @@ public class OAuthServerConfiguration {
         }
     }
 
+    private void parseEnableCryptoService(OMElement oauthConfigElement) {
+
+        OMElement cryptoServiceElement = oauthConfigElement
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.CRYPTO_SERVICE));
+        if (cryptoServiceElement != null) {
+            OMElement enableElement = cryptoServiceElement
+                    .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.CRYPTO_SERVICE_ENABLED));
+            if (enableElement != null) {
+                cryptoServiceEnabled = Boolean.parseBoolean(enableElement.getText());
+            }
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("Is Crypto Service enabled: " + cryptoServiceEnabled);
+        }
+    }
+
     public OAuth2ScopeValidator getoAuth2ScopeValidator() {
         return oAuth2ScopeValidator;
     }
@@ -2740,6 +2764,10 @@ public class OAuthServerConfiguration {
         //Hash algorithm configs
         private static final String HASH_ALGORITHM = "HashAlgorithm";
         private static final String ENABLE_CLIENT_SECRET_HASH = "EnableClientSecretHash";
+
+        //CryptoService Configs
+        private static final String CRYPTO_SERVICE = "CryptoService";
+        private static final String CRYPTO_SERVICE_ENABLED = "Enable";
 
     }
 

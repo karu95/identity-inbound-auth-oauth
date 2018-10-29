@@ -341,20 +341,4 @@ public class OAuth2ServiceComponent {
 
         OAuth2ServiceComponentHolder.unsetCryptoService();
     }
-
-    @Reference(
-            name = "serverConfigurationService",
-            service = ServerConfigurationService.class,
-            cardinality = ReferenceCardinality.MANDATORY,
-            unbind = "unsetServerConfigurationService"
-    )
-    public void setServerConfigurationService(ServerConfigurationService serverConfigurationService) {
-
-        OAuth2ServiceComponentHolder.setServerConfigurationService(serverConfigurationService);
-    }
-
-    public void unsetServerConfigurationService(ServerConfigurationService serverConfigurationService) {
-
-        OAuth2ServiceComponentHolder.unsetServerConfigurationService();
-    }
 }

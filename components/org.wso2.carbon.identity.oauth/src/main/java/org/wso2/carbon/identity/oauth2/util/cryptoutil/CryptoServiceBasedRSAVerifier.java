@@ -13,12 +13,20 @@ import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 
 import java.util.Set;
 
+/**
+ * Implementation of {@link JWSVerifier} based on Carbon Crypto Service.
+ */
 public class CryptoServiceBasedRSAVerifier implements JWSVerifier {
 
     private final CryptoContext cryptoContext;
     private final String jceProvider;
     private CryptoService cryptoService;
 
+    /**
+     *
+     * @param cryptoContext
+     * @param jceProvider
+     */
     public CryptoServiceBasedRSAVerifier(CryptoContext cryptoContext, String jceProvider) {
 
         this.jceProvider = jceProvider;
@@ -28,6 +36,14 @@ public class CryptoServiceBasedRSAVerifier implements JWSVerifier {
         }
     }
 
+    /**
+     *
+     * @param jwsHeader
+     * @param dataToBeVerified
+     * @param signature
+     * @return
+     * @throws JOSEException
+     */
     @Override
     public boolean verify(JWSHeader jwsHeader, byte[] dataToBeVerified, Base64URL signature) throws JOSEException {
         String algorithm = CryptoServiceBasedRSASSA.getSignVerifyAlgorithm(jwsHeader.getAlgorithm());
@@ -40,6 +56,10 @@ public class CryptoServiceBasedRSAVerifier implements JWSVerifier {
         }
     }
 
+    /**
+     *
+     * @return
+     */
     @Override
     public Set<JWSAlgorithm> supportedJWSAlgorithms() {
         return CryptoServiceBasedRSASSA.getSupportedAlgorithms();
