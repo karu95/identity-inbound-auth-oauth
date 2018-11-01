@@ -19,6 +19,7 @@ package org.wso2.carbon.identity.openidconnect;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JOSEObject;
+import com.nimbusds.jose.JWEDecrypter;
 import com.nimbusds.jose.JWEObject;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.crypto.RSADecrypter;
@@ -30,6 +31,8 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.base.MultitenantConstants;
+import org.wso2.carbon.crypto.api.CryptoContext;
+import org.wso2.carbon.identity.cryptoutil.CryptoServiceBasedRSADecrypter;
 import org.wso2.carbon.identity.oauth.common.OAuth2ErrorCodes;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.RequestObjectException;
@@ -93,8 +96,16 @@ public class RequestParamRequestObjectBuilder implements RequestObjectBuilder {
         EncryptedJWT encryptedJWT;
         try {
             encryptedJWT = EncryptedJWT.parse(requestObject);
-            RSAPrivateKey rsaPrivateKey = getRSAPrivateKey(oAuth2Parameters);
-            RSADecrypter decrypter = new RSADecrypter(rsaPrivateKey);
+            JWEDecrypter decrypter;
+            if (!OAuth2Util.isCryptoServiceEnabled()) {
+                RSAPrivateKey rsaPrivateKey = getRSAPrivateKey(oAuth2Parameters);
+                decrypter = new RSADecrypter(rsaPrivateKey);
+            } else {
+                String tenantDomain = getTenantDomainForDecryption(oAuth2Parameters);
+                int tenantID = OAuth2Util.getTenantId(tenantDomain);
+                decrypter = new CryptoServiceBasedRSADecrypter(CryptoContext.buildEmptyContext(tenantID, tenantDomain),
+                        "BC");
+            }
             encryptedJWT.decrypt(decrypter);
 
             JWEObject jweObject = JWEObject.parse(requestObject);

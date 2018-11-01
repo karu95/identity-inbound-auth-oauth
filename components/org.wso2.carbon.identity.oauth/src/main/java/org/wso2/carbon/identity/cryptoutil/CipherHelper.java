@@ -1,4 +1,4 @@
-package org.wso2.carbon.identity.oauth2.util.cryptoutil;
+package org.wso2.carbon.identity.cryptoutil;
 
 import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JOSEException;
@@ -7,6 +7,10 @@ import com.nimbusds.jose.JWEAlgorithm;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+/**
+ * This class is used to keep supported mechanisms by CryptoServiceBased encryption and decryption.
+ * Also this class is used for resolving JWE mechanisms to Standard JCE naming.
+ */
 class CipherHelper {
 
     private static final Set<JWEAlgorithm> algorithms = new LinkedHashSet<JWEAlgorithm>() {{
@@ -21,16 +25,33 @@ class CipherHelper {
         add(EncryptionMethod.A256GCM);
     }};
 
+    /**
+     * Returns supported algorithms.
+     *
+     * @return Set of {@link JWEAlgorithm}
+     */
     static Set<JWEAlgorithm> getSupportedAlgorithms() {
 
         return algorithms;
     }
 
+    /**
+     * Returns a set of supported symmetric encryption methods.
+     *
+     * @return Set of {@link EncryptionMethod}
+     */
     static Set<EncryptionMethod> getSupportedEncryptionMethods() {
 
         return encryptionMethods;
     }
 
+    /**
+     * Resolves standard JCE name for given {@link JWEAlgorithm}
+     *
+     * @param encryptionAlgorithm : Algorithm that needs to be resolved.
+     * @return Standard JCE name for the given algorithm.
+     * @throws JOSEException
+     */
     static String resolveAsymmetricAlgorithm(JWEAlgorithm encryptionAlgorithm) throws JOSEException {
 
         if (encryptionAlgorithm.equals(JWEAlgorithm.RSA1_5)) {
@@ -46,6 +67,13 @@ class CipherHelper {
         }
     }
 
+    /**
+     * Resolves standard JCE naming for given {@link EncryptionMethod}.
+     *
+     * @param encryptionMethod : Encryption method to resolve the standard JCE name.
+     * @return Standard JCE name for the given encryption method.
+     * @throws JOSEException
+     */
     static String resolveSymmetricAlgorithm(EncryptionMethod encryptionMethod) throws JOSEException {
 
         if (encryptionMethod.equals(EncryptionMethod.A128GCM)) {
@@ -56,7 +84,7 @@ class CipherHelper {
             return "AES_256/GCM/NoPadding";
         } else {
             String errorMessage = String.format("Requested symmetric algorithm '%s' is not supported by " +
-                            "Crypto Service based RSA provider.", encryptionMethod.getName());
+                    "Crypto Service based RSA provider.", encryptionMethod.getName());
             throw new JOSEException(errorMessage);
         }
     }

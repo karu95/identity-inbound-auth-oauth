@@ -27,9 +27,7 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
-import org.wso2.carbon.base.api.ServerConfigurationService;
 import org.wso2.carbon.context.PrivilegedCarbonContext;
-import org.wso2.carbon.crypto.api.CryptoService;
 import org.wso2.carbon.identity.application.authentication.framework.AuthenticationMethodNameTranslator;
 import org.wso2.carbon.identity.application.mgt.ApplicationManagementService;
 import org.wso2.carbon.identity.application.mgt.listener.ApplicationMgtListener;
@@ -323,22 +321,5 @@ public class OAuth2ServiceComponent {
             log.debug("UnSetting the Registry Service");
         }
         OAuth2ServiceComponentHolder.getAuthenticationHandlers().remove(oAuthClientAuthenticator);
-    }
-
-    @Reference(
-            name = "cryptoService",
-            service = CryptoService.class,
-            cardinality = ReferenceCardinality.MANDATORY,
-            policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetCryptoService"
-    )
-    protected void setCryptoService(CryptoService cryptoService) {
-
-        OAuth2ServiceComponentHolder.setCryptoService(cryptoService);
-    }
-
-    protected void unsetCryptoService(CryptoService cryptoService) {
-
-        OAuth2ServiceComponentHolder.unsetCryptoService();
     }
 }

@@ -1,4 +1,4 @@
-package org.wso2.carbon.identity.oauth2.util.cryptoutil;
+package org.wso2.carbon.identity.cryptoutil;
 
 import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JOSEException;
@@ -13,37 +13,53 @@ import org.wso2.carbon.crypto.api.CryptoException;
 import org.wso2.carbon.crypto.api.CryptoService;
 import org.wso2.carbon.crypto.api.HybridEncryptionInput;
 import org.wso2.carbon.crypto.api.HybridEncryptionOutput;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.cryptoutil.internal.CryptoUtilDataHolder;
 
 import javax.crypto.spec.GCMParameterSpec;
 import java.nio.charset.Charset;
 import java.util.Set;
 
+/**
+ * Implementation of {@link JWEEncrypter} based of Carbon Crypto Service.
+ * Instances of this class provides JWT encryption using Carbon Crypto Service.
+ */
 public class CryptoServiceBasedRSAEncrypter implements JWEEncrypter {
 
     private final CryptoContext cryptoContext;
     private final String jceProvider;
     private CryptoService cryptoService;
 
+    /**
+     * @param cryptoContext : Context related to encryption data.
+     * @param jceProvider   : JCE Provider used for encryption.
+     */
     public CryptoServiceBasedRSAEncrypter(CryptoContext cryptoContext, String jceProvider) {
 
         this.jceProvider = jceProvider;
         this.cryptoContext = cryptoContext;
-        if (OAuth2ServiceComponentHolder.getCryptoService() != null) {
-            cryptoService = OAuth2ServiceComponentHolder.getCryptoService();
+        if (CryptoUtilDataHolder.getCryptoService() != null) {
+            cryptoService = CryptoUtilDataHolder.getCryptoService();
         }
     }
 
+    /**
+     * Encrypt a given JWT using Carbon Crypto Service. {@link CryptoService}
+     *
+     * @param jweHeader : JWE Header of the token.
+     * @param clearText : Clear data to be encrypted.
+     * @return Parts of the encryption. {@link JWECryptoParts}
+     * @throws JOSEException
+     */
     @Override
     public JWECryptoParts encrypt(JWEHeader jweHeader, byte[] clearText) throws JOSEException {
 
         String symmetricAlgorithm = CipherHelper.resolveSymmetricAlgorithm(jweHeader.getEncryptionMethod());
         String asymmetricAlgorithm = CipherHelper.resolveAsymmetricAlgorithm(jweHeader.getAlgorithm());
-
+        byte[] plainText = DeflateHelper.applyCompression(jweHeader, clearText);
         HybridEncryptionOutput encryptionOutput;
         try {
             if (symmetricAlgorithm.contains("GCM")) {
-                encryptionOutput = cryptoService.hybridEncrypt(new HybridEncryptionInput(clearText,
+                encryptionOutput = cryptoService.hybridEncrypt(new HybridEncryptionInput(plainText,
                         computeAAD(jweHeader)), symmetricAlgorithm, asymmetricAlgorithm, jceProvider, cryptoContext);
             } else {
                 String errorMessage = "";
@@ -74,11 +90,21 @@ public class CryptoServiceBasedRSAEncrypter implements JWEEncrypter {
                 authTag);
     }
 
+    /**
+     * Returns set of asymmetric algorithms {@link JWEAlgorithm} supported by {@link CryptoServiceBasedRSAEncrypter}
+     *
+     * @return set of supported {@link JWEAlgorithm}
+     */
     @Override
     public Set<JWEAlgorithm> supportedJWEAlgorithms() {
         return CipherHelper.getSupportedAlgorithms();
     }
 
+    /**
+     * Returns set of symmetric algorithms {@link EncryptionMethod} supported by {@link CryptoServiceBasedRSAEncrypter}
+     *
+     * @return
+     */
     @Override
     public Set<EncryptionMethod> supportedEncryptionMethods() {
         return CipherHelper.getSupportedEncryptionMethods();

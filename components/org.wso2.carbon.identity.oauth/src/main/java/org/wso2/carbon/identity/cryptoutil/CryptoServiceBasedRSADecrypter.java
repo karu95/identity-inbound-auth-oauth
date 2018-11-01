@@ -1,4 +1,4 @@
-package org.wso2.carbon.identity.oauth2.util.cryptoutil;
+package org.wso2.carbon.identity.cryptoutil;
 
 import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JOSEException;
@@ -11,28 +11,47 @@ import org.wso2.carbon.crypto.api.CryptoContext;
 import org.wso2.carbon.crypto.api.CryptoException;
 import org.wso2.carbon.crypto.api.CryptoService;
 import org.wso2.carbon.crypto.api.HybridEncryptionOutput;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.cryptoutil.internal.CryptoUtilDataHolder;
 
 import javax.crypto.spec.GCMParameterSpec;
 import java.nio.charset.Charset;
 import java.security.spec.AlgorithmParameterSpec;
 import java.util.Set;
 
+/**
+ * Implementation of {@link JWEDecrypter} based of Carbon Crypto Service.
+ * Instances of this class provides JWT decryption using Carbon Crypto Service.
+ */
 public class CryptoServiceBasedRSADecrypter implements JWEDecrypter {
 
     private CryptoContext cryptoContext;
     private String jceProvider;
     private CryptoService cryptoService;
 
+    /**
+     * @param cryptoContext : Context related to decryption data.
+     * @param jceProvider   : JCE Provider used for decryption.
+     */
     public CryptoServiceBasedRSADecrypter(CryptoContext cryptoContext, String jceProvider) {
 
         this.jceProvider = jceProvider;
         this.cryptoContext = cryptoContext;
-        if (OAuth2ServiceComponentHolder.getCryptoService() != null) {
-            cryptoService = OAuth2ServiceComponentHolder.getCryptoService();
+        if (CryptoUtilDataHolder.getCryptoService() != null) {
+            cryptoService = CryptoUtilDataHolder.getCryptoService();
         }
     }
 
+    /**
+     * Decrypt a given data related to JWT using Carbon Crypto Service.
+     *
+     * @param jweHeader    : Header of JWT.
+     * @param encryptedKey : Encrypted symmetric key used for data encryption.
+     * @param iv           : Initialization vector parameter
+     * @param cipherText   : Encrypted text
+     * @param authTag      : Authentication tag related to cipher text.
+     * @return decrypted data
+     * @throws JOSEException
+     */
     @Override
     public byte[] decrypt(JWEHeader jweHeader, Base64URL encryptedKey, Base64URL iv, Base64URL cipherText,
                           Base64URL authTag) throws JOSEException {
@@ -64,8 +83,10 @@ public class CryptoServiceBasedRSADecrypter implements JWEDecrypter {
         byte[] aad = computeAAD(jweHeader);
 
         try {
-            return cryptoService.hybridDecrypt(new HybridEncryptionOutput(cipherText.decode(), encryptedKey.decode(),
-                    aad, authTag.decode(), parameterSpec), symmetricAlgorithm, asymmetricAlgorithm, jceProvider, cryptoContext);
+            return DeflateHelper.applyDecompression(jweHeader,
+                    cryptoService.hybridDecrypt(new HybridEncryptionOutput(cipherText.decode(), encryptedKey.decode(),
+                                    aad, authTag.decode(), parameterSpec),
+                            symmetricAlgorithm, asymmetricAlgorithm, jceProvider, cryptoContext));
         } catch (CryptoException e) {
             String errorMessage = String.format("Error occurred while hybrid decrypting JWT using " +
                     "symmetric algorithm '%s' and asymmetric algorithm '%s'.", symmetricAlgorithm, asymmetricAlgorithm);
@@ -73,18 +94,31 @@ public class CryptoServiceBasedRSADecrypter implements JWEDecrypter {
         }
     }
 
+    /**
+     * Returns set of asymmetric algorithms {@link JWEAlgorithm} supported by {@link CryptoServiceBasedRSAEncrypter}
+     *
+     * @return set of supported {@link JWEAlgorithm}
+     */
     @Override
     public Set<JWEAlgorithm> supportedJWEAlgorithms() {
+
         return CipherHelper.getSupportedAlgorithms();
     }
 
+    /**
+     * Returns set of symmetric algorithms {@link EncryptionMethod} supported by {@link CryptoServiceBasedRSAEncrypter}
+     *
+     * @return
+     */
     @Override
     public Set<EncryptionMethod> supportedEncryptionMethods() {
+
         return CipherHelper.getSupportedEncryptionMethods();
     }
 
     @Override
     public JWEJCAContext getJCAContext() {
+
         return null;
     }
 

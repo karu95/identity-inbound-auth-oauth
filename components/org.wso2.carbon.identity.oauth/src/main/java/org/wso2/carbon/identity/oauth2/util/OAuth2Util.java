@@ -22,14 +22,12 @@ import com.nimbusds.jose.Algorithm;
 import com.nimbusds.jose.EncryptionMethod;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWEAlgorithm;
-import com.nimbusds.jose.JWEDecrypter;
 import com.nimbusds.jose.JWEEncrypter;
 import com.nimbusds.jose.JWEHeader;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.JWSVerifier;
-import com.nimbusds.jose.crypto.RSADecrypter;
 import com.nimbusds.jose.crypto.RSAEncrypter;
 import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
@@ -67,6 +65,10 @@ import org.wso2.carbon.identity.core.util.IdentityCoreConstants;
 import org.wso2.carbon.identity.core.util.IdentityIOStreamUtils;
 import org.wso2.carbon.identity.core.util.IdentityTenantUtil;
 import org.wso2.carbon.identity.core.util.IdentityUtil;
+import org.wso2.carbon.identity.cryptoutil.CryptoServiceBasedRSAEncrypter;
+import org.wso2.carbon.identity.cryptoutil.CryptoServiceBasedRSASigner;
+import org.wso2.carbon.identity.cryptoutil.CryptoServiceBasedRSAVerifier;
+import org.wso2.carbon.identity.cryptoutil.internal.CryptoUtilDataHolder;
 import org.wso2.carbon.identity.oauth.IdentityOAuthAdminException;
 import org.wso2.carbon.identity.oauth.cache.AppInfoCache;
 import org.wso2.carbon.identity.oauth.cache.CacheEntry;
@@ -90,10 +92,6 @@ import org.wso2.carbon.identity.oauth2.model.ClientCredentialDO;
 import org.wso2.carbon.identity.oauth2.token.JWTTokenIssuer;
 import org.wso2.carbon.identity.oauth2.token.OAuthTokenReqMessageContext;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
-import org.wso2.carbon.identity.oauth2.util.cryptoutil.CryptoServiceBasedRSADecrypter;
-import org.wso2.carbon.identity.oauth2.util.cryptoutil.CryptoServiceBasedRSAEncrypter;
-import org.wso2.carbon.identity.oauth2.util.cryptoutil.CryptoServiceBasedRSASigner;
-import org.wso2.carbon.identity.oauth2.util.cryptoutil.CryptoServiceBasedRSAVerifier;
 import org.wso2.carbon.identity.openidconnect.model.RequestedClaim;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.registry.core.Resource;
@@ -151,104 +149,76 @@ public class OAuth2Util {
     public static final String JWT_ACCESS_TOKEN = "JWT_ACCESS_TOKEN";
     public static final String ACCESS_TOKEN_DO = "AccessTokenDo";
     public static final String OAUTH2_VALIDATION_MESSAGE_CONTEXT = "OAuth2TokenValidationMessageContext";
-    private static final String ESSENTAIL = "essential";
     public static final String CONFIG_ELEM_OAUTH = "OAuth";
     public static final String OPENID_CONNECT = "OpenIDConnect";
     public static final String ENABLE_OPENID_CONNECT_AUDIENCES = "EnableAudiences";
     public static final String OPENID_CONNECT_AUDIENCE = "audience";
-    private static final String DOT_SEPARATER = ".";
-    private static final String CRYPTO_SERVICE_ENABLING_PROPERTY_PATH = "CryptoService.Enabled";
-
     public static final String DEFAULT_TOKEN_TYPE = "Default";
-
-    private static final String ALGORITHM_NONE = "NONE";
     /*
      * OPTIONAL. A JSON string containing a space-separated list of scopes associated with this token, in the format
      * described in Section 3.3 of OAuth 2.0
      */
     public static final String SCOPE = "scope";
-
     /*
      * OPTIONAL. Client identifier for the OAuth 2.0 client that requested this token.
      */
     public static final String CLIENT_ID = "client_id";
-
     /*
      * OPTIONAL. Human-readable identifier for the resource owner who authorized this token.
      */
     public static final String USERNAME = "username";
-
     /*
      * OPTIONAL. Type of the token as defined in Section 5.1 of OAuth 2.0
      */
     public static final String TOKEN_TYPE = "token_type";
-
     /*
      * OPTIONAL. Integer time-stamp, measured in the number of seconds since January 1 1970 UTC, indicating when this
      * token is not to be used before, as defined in JWT
      */
     public static final String NBF = "nbf";
-
     /*
      * OPTIONAL. Service-specific string identifier or list of string identifiers representing the intended audience for
      * this token, as defined in JWT
      */
     public static final String AUD = "aud";
-
     /*
      * OPTIONAL. String representing the issuer of this token, as defined in JWT
      */
     public static final String ISS = "iss";
-
     /*
      * OPTIONAL. String identifier for the token, as defined in JWT
      */
     public static final String JTI = "jti";
-
     /*
      * OPTIONAL. Subject of the token, as defined in JWT [RFC7519]. Usually a machine-readable identifier of the
      * resource owner who authorized this token.
      */
     public static final String SUB = "sub";
-
     /*
      * OPTIONAL. Integer time-stamp, measured in the number of seconds since January 1 1970 UTC, indicating when this
      * token will expire, as defined in JWT
      */
     public static final String EXP = "exp";
-
     /*
      * OPTIONAL. Integer time-stamp, measured in the number of seconds since January 1 1970 UTC, indicating when this
      * token was originally issued, as defined in JWT
      */
     public static final String IAT = "iat";
-
     /***
      * Constant for user access token expiry time.
      */
     public static final String USER_ACCESS_TOKEN_EXP_TIME_IN_MILLISECONDS = "userAccessTokenExpireTime";
-
     /***
      * Constant for refresh token expiry time.
      */
     public static final String REFRESH_TOKEN_EXP_TIME_IN_MILLISECONDS = "refreshTokenExpireTime";
-
     /***
      * Constant for application access token expiry time.
      */
     public static final String APPLICATION_ACCESS_TOKEN_EXP_TIME_IN_MILLISECONDS = "applicationAccessTokenExpireTime";
-
-    private static Log log = LogFactory.getLog(OAuth2Util.class);
-    private static long timestampSkew = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
-    private static ThreadLocal<Integer> clientTenantId = new ThreadLocal<>();
-    private static ThreadLocal<OAuthTokenReqMessageContext> tokenRequestContext = new ThreadLocal<>();
-    private static ThreadLocal<OAuthAuthzReqMessageContext> authzRequestContext = new ThreadLocal<>();
-    //Precompile PKCE Regex pattern for performance improvement
-    private static Pattern pkceCodeVerifierPattern = Pattern.compile("[\\w\\-\\._~]+");
-
-    private static Map<Integer, Certificate> publicCerts = new ConcurrentHashMap<Integer, Certificate>();
-    private static Map<Integer, Key> privateKeys = new ConcurrentHashMap<Integer, Key>();
-
+    private static final String ESSENTAIL = "essential";
+    private static final String DOT_SEPARATER = ".";
+    private static final String ALGORITHM_NONE = "NONE";
     // Supported Signature Algorithms
     private static final String NONE = "NONE";
     private static final String SHA256_WITH_RSA = "SHA256withRSA";
@@ -263,6 +233,15 @@ public class OAuth2Util {
     private static final String SHA256 = "SHA-256";
     private static final String SHA384 = "SHA-384";
     private static final String SHA512 = "SHA-512";
+    private static Log log = LogFactory.getLog(OAuth2Util.class);
+    private static long timestampSkew = OAuthServerConfiguration.getInstance().getTimeStampSkewInSeconds() * 1000;
+    private static ThreadLocal<Integer> clientTenantId = new ThreadLocal<>();
+    private static ThreadLocal<OAuthTokenReqMessageContext> tokenRequestContext = new ThreadLocal<>();
+    private static ThreadLocal<OAuthAuthzReqMessageContext> authzRequestContext = new ThreadLocal<>();
+    //Precompile PKCE Regex pattern for performance improvement
+    private static Pattern pkceCodeVerifierPattern = Pattern.compile("[\\w\\-\\._~]+");
+    private static Map<Integer, Certificate> publicCerts = new ConcurrentHashMap<Integer, Certificate>();
+    private static Map<Integer, Key> privateKeys = new ConcurrentHashMap<Integer, Key>();
 
     private OAuth2Util() {
 
@@ -1005,148 +984,6 @@ public class OAuth2Util {
             issuer = OAuthURL.getOAuth2TokenEPUrl();
         }
         return issuer;
-    }
-
-    public static class OAuthURL {
-
-        public static String getOAuth1RequestTokenUrl() {
-
-            String oauth1RequestTokenUrl = OAuthServerConfiguration.getInstance().getOAuth1RequestTokenUrl();
-            if (StringUtils.isBlank(oauth1RequestTokenUrl)) {
-                oauth1RequestTokenUrl = IdentityUtil.getServerURL("oauth/request-token", true, true);
-            }
-            return oauth1RequestTokenUrl;
-        }
-
-        public static String getOAuth1AuthorizeUrl() {
-
-            String oauth1AuthorizeUrl = OAuthServerConfiguration.getInstance().getOAuth1AuthorizeUrl();
-            if (StringUtils.isBlank(oauth1AuthorizeUrl)) {
-                oauth1AuthorizeUrl = IdentityUtil.getServerURL("oauth/authorize-url", true, true);
-            }
-            return oauth1AuthorizeUrl;
-        }
-
-        public static String getOAuth1AccessTokenUrl() {
-
-            String oauth1AccessTokenUrl = OAuthServerConfiguration.getInstance().getOAuth1AccessTokenUrl();
-            if (StringUtils.isBlank(oauth1AccessTokenUrl)) {
-                oauth1AccessTokenUrl = IdentityUtil.getServerURL("oauth/access-token", true, true);
-            }
-            return oauth1AccessTokenUrl;
-        }
-
-        public static String getOAuth2AuthzEPUrl() {
-
-            String oauth2AuthzEPUrl = OAuthServerConfiguration.getInstance().getOAuth2AuthzEPUrl();
-            if (StringUtils.isBlank(oauth2AuthzEPUrl)) {
-                oauth2AuthzEPUrl = IdentityUtil.getServerURL("oauth2/authorize", true, false);
-            }
-            return oauth2AuthzEPUrl;
-        }
-
-        public static String getOAuth2TokenEPUrl() {
-
-            String oauth2TokenEPUrl = OAuthServerConfiguration.getInstance().getOAuth2TokenEPUrl();
-            if (StringUtils.isBlank(oauth2TokenEPUrl)) {
-                oauth2TokenEPUrl = IdentityUtil.getServerURL("oauth2/token", true, false);
-            }
-            return oauth2TokenEPUrl;
-        }
-
-        public static String getOAuth2DCREPUrl(String tenantDomain) throws URISyntaxException {
-
-            String oauth2TokenEPUrl = OAuthServerConfiguration.getInstance().getOAuth2DCREPUrl();
-            if (StringUtils.isBlank(oauth2TokenEPUrl)) {
-                oauth2TokenEPUrl = IdentityUtil.getServerURL("/api/identity/oauth2/dcr/v1.0/register", true, false);
-            }
-            if (StringUtils.isNotBlank(tenantDomain) && !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals
-                    (tenantDomain)) {
-                oauth2TokenEPUrl = getTenantUrl(oauth2TokenEPUrl, tenantDomain);
-            }
-            return oauth2TokenEPUrl;
-        }
-
-        public static String getOAuth2JWKSPageUrl(String tenantDomain) throws URISyntaxException {
-
-            String auth2JWKSPageUrl = OAuthServerConfiguration.getInstance().getOAuth2JWKSPageUrl();
-            if (StringUtils.isBlank(auth2JWKSPageUrl)) {
-                auth2JWKSPageUrl = IdentityUtil.getServerURL("/oauth2/jwks", true, false);
-            }
-            if (StringUtils.isNotBlank(tenantDomain) && !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals
-                    (tenantDomain)) {
-                auth2JWKSPageUrl = getTenantUrl(auth2JWKSPageUrl, tenantDomain);
-            }
-            return auth2JWKSPageUrl;
-        }
-
-        public static String getOidcWebFingerEPUrl() {
-
-            String oauth2TokenEPUrl = OAuthServerConfiguration.getInstance().getOidcWebFingerEPUrl();
-            if (StringUtils.isBlank(oauth2TokenEPUrl)) {
-                oauth2TokenEPUrl = IdentityUtil.getServerURL(".well-know/webfinger", true, false);
-            }
-            return oauth2TokenEPUrl;
-        }
-
-        public static String getOidcDiscoveryEPUrl(String tenantDomain) throws URISyntaxException {
-
-            String oidcDiscoveryEPUrl = OAuthServerConfiguration.getInstance().getOidcDiscoveryUrl();
-            if (StringUtils.isBlank(oidcDiscoveryEPUrl)) {
-                oidcDiscoveryEPUrl = IdentityUtil.getServerURL("/oauth2/oidcdiscovery", true, false);
-            }
-            if (StringUtils.isNotBlank(tenantDomain) && !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals
-                    (tenantDomain)) {
-                oidcDiscoveryEPUrl = getTenantUrl(oidcDiscoveryEPUrl, tenantDomain);
-            }
-            return oidcDiscoveryEPUrl;
-        }
-
-        public static String getOAuth2UserInfoEPUrl() {
-
-            String oauth2UserInfoEPUrl = OAuthServerConfiguration.getInstance().getOauth2UserInfoEPUrl();
-            if (StringUtils.isBlank(oauth2UserInfoEPUrl)) {
-                oauth2UserInfoEPUrl = IdentityUtil.getServerURL("oauth2/userinfo", true, false);
-            }
-            return oauth2UserInfoEPUrl;
-        }
-
-        public static String getOIDCConsentPageUrl() {
-
-            String OIDCConsentPageUrl = OAuthServerConfiguration.getInstance().getOIDCConsentPageUrl();
-            if (StringUtils.isBlank(OIDCConsentPageUrl)) {
-                OIDCConsentPageUrl = IdentityUtil.getServerURL("/authenticationendpoint/oauth2_consent.do", false,
-                        false);
-            }
-            return OIDCConsentPageUrl;
-        }
-
-        public static String getOAuth2ConsentPageUrl() {
-
-            String oAuth2ConsentPageUrl = OAuthServerConfiguration.getInstance().getOauth2ConsentPageUrl();
-            if (StringUtils.isBlank(oAuth2ConsentPageUrl)) {
-                oAuth2ConsentPageUrl = IdentityUtil.getServerURL("/authenticationendpoint/oauth2_authz.do", false,
-                        false);
-            }
-            return oAuth2ConsentPageUrl;
-        }
-
-        public static String getOAuth2ErrorPageUrl() {
-
-            String oAuth2ErrorPageUrl = OAuthServerConfiguration.getInstance().getOauth2ErrorPageUrl();
-            if (StringUtils.isBlank(oAuth2ErrorPageUrl)) {
-                oAuth2ErrorPageUrl = IdentityUtil.getServerURL("/authenticationendpoint/oauth2_error.do", false, false);
-            }
-            return oAuth2ErrorPageUrl;
-        }
-
-        private static String getTenantUrl(String url, String tenantDomain) throws URISyntaxException {
-
-            URI uri = new URI(url);
-            URI uriModified = new URI(uri.getScheme(), uri.getUserInfo(), uri.getHost(), uri.getPort(), ("/t/" +
-                    tenantDomain + uri.getPath()), uri.getQuery(), uri.getFragment());
-            return uriModified.toString();
-        }
     }
 
     public static boolean isOIDCAuthzRequest(Set<String> scope) {
@@ -1935,9 +1772,9 @@ public class OAuth2Util {
             Certificate publicCert;
             int tenantId = IdentityTenantUtil.getTenantId(spTenantDomain);
             if (isCryptoServiceEnabled()) {
-                CryptoService cryptoService = OAuth2ServiceComponentHolder.getCryptoService();
+                CryptoService cryptoService = CryptoUtilDataHolder.getCryptoService();
                 publicCert = cryptoService.getCertificate(new CryptoContext(tenantId, spTenantDomain,
-                        null, clientId, null, null));
+                        "SERVICE-PROVIDER-OAUTH", clientId, null, null));
             } else {
                 publicCert = getX509CertOfOAuthApp(clientId, spTenantDomain);
             }
@@ -1959,9 +1796,9 @@ public class OAuth2Util {
             JWEEncrypter encrypter;
             if (isCryptoServiceEnabled()) {
                 encrypter = new CryptoServiceBasedRSAEncrypter(new CryptoContext(tenantId, spTenantDomain,
-                        null, clientId, null, null), "BC");
+                        "SERVICE-PROVIDER-OAUTH", clientId, null, null), "BC");
             } else {
-                 encrypter = new RSAEncrypter((RSAPublicKey) publicKey);
+                encrypter = new RSAEncrypter((RSAPublicKey) publicKey);
             }
             encryptedJWT.encrypt(encrypter);
 
@@ -2477,9 +2314,151 @@ public class OAuth2Util {
         return oauthTokenIssuer;
     }
 
-    protected static boolean isCryptoServiceEnabled() {
+    public static boolean isCryptoServiceEnabled() {
 
         return OAuthServerConfiguration.getInstance().getCryptoServiceEnabled();
+    }
+
+    public static class OAuthURL {
+
+        public static String getOAuth1RequestTokenUrl() {
+
+            String oauth1RequestTokenUrl = OAuthServerConfiguration.getInstance().getOAuth1RequestTokenUrl();
+            if (StringUtils.isBlank(oauth1RequestTokenUrl)) {
+                oauth1RequestTokenUrl = IdentityUtil.getServerURL("oauth/request-token", true, true);
+            }
+            return oauth1RequestTokenUrl;
+        }
+
+        public static String getOAuth1AuthorizeUrl() {
+
+            String oauth1AuthorizeUrl = OAuthServerConfiguration.getInstance().getOAuth1AuthorizeUrl();
+            if (StringUtils.isBlank(oauth1AuthorizeUrl)) {
+                oauth1AuthorizeUrl = IdentityUtil.getServerURL("oauth/authorize-url", true, true);
+            }
+            return oauth1AuthorizeUrl;
+        }
+
+        public static String getOAuth1AccessTokenUrl() {
+
+            String oauth1AccessTokenUrl = OAuthServerConfiguration.getInstance().getOAuth1AccessTokenUrl();
+            if (StringUtils.isBlank(oauth1AccessTokenUrl)) {
+                oauth1AccessTokenUrl = IdentityUtil.getServerURL("oauth/access-token", true, true);
+            }
+            return oauth1AccessTokenUrl;
+        }
+
+        public static String getOAuth2AuthzEPUrl() {
+
+            String oauth2AuthzEPUrl = OAuthServerConfiguration.getInstance().getOAuth2AuthzEPUrl();
+            if (StringUtils.isBlank(oauth2AuthzEPUrl)) {
+                oauth2AuthzEPUrl = IdentityUtil.getServerURL("oauth2/authorize", true, false);
+            }
+            return oauth2AuthzEPUrl;
+        }
+
+        public static String getOAuth2TokenEPUrl() {
+
+            String oauth2TokenEPUrl = OAuthServerConfiguration.getInstance().getOAuth2TokenEPUrl();
+            if (StringUtils.isBlank(oauth2TokenEPUrl)) {
+                oauth2TokenEPUrl = IdentityUtil.getServerURL("oauth2/token", true, false);
+            }
+            return oauth2TokenEPUrl;
+        }
+
+        public static String getOAuth2DCREPUrl(String tenantDomain) throws URISyntaxException {
+
+            String oauth2TokenEPUrl = OAuthServerConfiguration.getInstance().getOAuth2DCREPUrl();
+            if (StringUtils.isBlank(oauth2TokenEPUrl)) {
+                oauth2TokenEPUrl = IdentityUtil.getServerURL("/api/identity/oauth2/dcr/v1.0/register", true, false);
+            }
+            if (StringUtils.isNotBlank(tenantDomain) && !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals
+                    (tenantDomain)) {
+                oauth2TokenEPUrl = getTenantUrl(oauth2TokenEPUrl, tenantDomain);
+            }
+            return oauth2TokenEPUrl;
+        }
+
+        public static String getOAuth2JWKSPageUrl(String tenantDomain) throws URISyntaxException {
+
+            String auth2JWKSPageUrl = OAuthServerConfiguration.getInstance().getOAuth2JWKSPageUrl();
+            if (StringUtils.isBlank(auth2JWKSPageUrl)) {
+                auth2JWKSPageUrl = IdentityUtil.getServerURL("/oauth2/jwks", true, false);
+            }
+            if (StringUtils.isNotBlank(tenantDomain) && !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals
+                    (tenantDomain)) {
+                auth2JWKSPageUrl = getTenantUrl(auth2JWKSPageUrl, tenantDomain);
+            }
+            return auth2JWKSPageUrl;
+        }
+
+        public static String getOidcWebFingerEPUrl() {
+
+            String oauth2TokenEPUrl = OAuthServerConfiguration.getInstance().getOidcWebFingerEPUrl();
+            if (StringUtils.isBlank(oauth2TokenEPUrl)) {
+                oauth2TokenEPUrl = IdentityUtil.getServerURL(".well-know/webfinger", true, false);
+            }
+            return oauth2TokenEPUrl;
+        }
+
+        public static String getOidcDiscoveryEPUrl(String tenantDomain) throws URISyntaxException {
+
+            String oidcDiscoveryEPUrl = OAuthServerConfiguration.getInstance().getOidcDiscoveryUrl();
+            if (StringUtils.isBlank(oidcDiscoveryEPUrl)) {
+                oidcDiscoveryEPUrl = IdentityUtil.getServerURL("/oauth2/oidcdiscovery", true, false);
+            }
+            if (StringUtils.isNotBlank(tenantDomain) && !MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals
+                    (tenantDomain)) {
+                oidcDiscoveryEPUrl = getTenantUrl(oidcDiscoveryEPUrl, tenantDomain);
+            }
+            return oidcDiscoveryEPUrl;
+        }
+
+        public static String getOAuth2UserInfoEPUrl() {
+
+            String oauth2UserInfoEPUrl = OAuthServerConfiguration.getInstance().getOauth2UserInfoEPUrl();
+            if (StringUtils.isBlank(oauth2UserInfoEPUrl)) {
+                oauth2UserInfoEPUrl = IdentityUtil.getServerURL("oauth2/userinfo", true, false);
+            }
+            return oauth2UserInfoEPUrl;
+        }
+
+        public static String getOIDCConsentPageUrl() {
+
+            String OIDCConsentPageUrl = OAuthServerConfiguration.getInstance().getOIDCConsentPageUrl();
+            if (StringUtils.isBlank(OIDCConsentPageUrl)) {
+                OIDCConsentPageUrl = IdentityUtil.getServerURL("/authenticationendpoint/oauth2_consent.do", false,
+                        false);
+            }
+            return OIDCConsentPageUrl;
+        }
+
+        public static String getOAuth2ConsentPageUrl() {
+
+            String oAuth2ConsentPageUrl = OAuthServerConfiguration.getInstance().getOauth2ConsentPageUrl();
+            if (StringUtils.isBlank(oAuth2ConsentPageUrl)) {
+                oAuth2ConsentPageUrl = IdentityUtil.getServerURL("/authenticationendpoint/oauth2_authz.do", false,
+                        false);
+            }
+            return oAuth2ConsentPageUrl;
+        }
+
+        public static String getOAuth2ErrorPageUrl() {
+
+            String oAuth2ErrorPageUrl = OAuthServerConfiguration.getInstance().getOauth2ErrorPageUrl();
+            if (StringUtils.isBlank(oAuth2ErrorPageUrl)) {
+                oAuth2ErrorPageUrl = IdentityUtil.getServerURL("/authenticationendpoint/oauth2_error.do", false, false);
+            }
+            return oAuth2ErrorPageUrl;
+        }
+
+        private static String getTenantUrl(String url, String tenantDomain) throws URISyntaxException {
+
+            URI uri = new URI(url);
+            URI uriModified = new URI(uri.getScheme(), uri.getUserInfo(), uri.getHost(), uri.getPort(), ("/t/" +
+                    tenantDomain + uri.getPath()), uri.getQuery(), uri.getFragment());
+            return uriModified.toString();
+        }
     }
 
 }

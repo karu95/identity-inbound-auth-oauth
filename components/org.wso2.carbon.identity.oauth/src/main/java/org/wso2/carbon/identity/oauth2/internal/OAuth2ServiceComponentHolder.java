@@ -146,16 +146,4 @@ public class OAuth2ServiceComponentHolder {
     public static void unregisterClaimProvider(ClaimProvider claimProvider) {
         claimProviders.remove(claimProvider);
     }
-
-    public static void setCryptoService(CryptoService cryptoService) {
-        OAuth2ServiceComponentHolder.cryptoService = cryptoService;
-    }
-
-    public static CryptoService getCryptoService() {
-        return OAuth2ServiceComponentHolder.cryptoService;
-    }
-
-    public static void unsetCryptoService() {
-        OAuth2ServiceComponentHolder.cryptoService = null;
-    }
 }

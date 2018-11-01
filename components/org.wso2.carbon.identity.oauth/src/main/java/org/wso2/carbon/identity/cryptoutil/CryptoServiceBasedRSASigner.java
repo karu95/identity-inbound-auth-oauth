@@ -1,4 +1,4 @@
-package org.wso2.carbon.identity.oauth2.util.cryptoutil;
+package org.wso2.carbon.identity.cryptoutil;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -9,12 +9,13 @@ import com.nimbusds.jose.util.Base64URL;
 import org.wso2.carbon.crypto.api.CryptoContext;
 import org.wso2.carbon.crypto.api.CryptoException;
 import org.wso2.carbon.crypto.api.CryptoService;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.cryptoutil.internal.CryptoUtilDataHolder;
 
 import java.util.Set;
 
 /**
  * Implementation of {@link JWSSigner} based on Carbon Crypto Service.
+ * Instances of this class provides JWT signing using Carbon Crypto Service.
  */
 public class CryptoServiceBasedRSASigner implements JWSSigner {
 
@@ -23,25 +24,23 @@ public class CryptoServiceBasedRSASigner implements JWSSigner {
     private CryptoService cryptoService;
 
     /**
-     *
-     *
-     * @param cryptoContext
-     * @param jceProvider
+     * @param cryptoContext : Context related to data to be signed.
+     * @param jceProvider   : JCE Provider used for signing.
      */
     public CryptoServiceBasedRSASigner(CryptoContext cryptoContext, String jceProvider) {
 
         this.jceProvider = jceProvider;
         this.cryptoContext = cryptoContext;
-        if (OAuth2ServiceComponentHolder.getCryptoService() != null) {
-            cryptoService = OAuth2ServiceComponentHolder.getCryptoService();
+        if (CryptoUtilDataHolder.getCryptoService() != null) {
+            cryptoService = CryptoUtilDataHolder.getCryptoService();
         }
     }
 
     /**
+     * Sign a given data related to JWT using  Carbon Crypto Service {@link CryptoService}.
      *
-     *
-     * @param jwsHeader
-     * @param dataToBeSigned
+     * @param jwsHeader      : Header of the JWT.
+     * @param dataToBeSigned : Data that needs to be signed.
      * @return
      * @throws JOSEException
      */
@@ -59,6 +58,7 @@ public class CryptoServiceBasedRSASigner implements JWSSigner {
     }
 
     /**
+     * Returns set of supported {@link JWSAlgorithm}
      *
      * @return
      */

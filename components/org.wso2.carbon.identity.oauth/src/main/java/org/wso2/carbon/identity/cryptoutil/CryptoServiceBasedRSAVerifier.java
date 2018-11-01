@@ -1,4 +1,4 @@
-package org.wso2.carbon.identity.oauth2.util.cryptoutil;
+package org.wso2.carbon.identity.cryptoutil;
 
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -9,12 +9,13 @@ import com.nimbusds.jose.util.Base64URL;
 import org.wso2.carbon.crypto.api.CryptoContext;
 import org.wso2.carbon.crypto.api.CryptoException;
 import org.wso2.carbon.crypto.api.CryptoService;
-import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.cryptoutil.internal.CryptoUtilDataHolder;
 
 import java.util.Set;
 
 /**
  * Implementation of {@link JWSVerifier} based on Carbon Crypto Service.
+ * Instances of this class provides JWT verification using Carbon Crypto Service.
  */
 public class CryptoServiceBasedRSAVerifier implements JWSVerifier {
 
@@ -23,24 +24,24 @@ public class CryptoServiceBasedRSAVerifier implements JWSVerifier {
     private CryptoService cryptoService;
 
     /**
-     *
-     * @param cryptoContext
-     * @param jceProvider
+     * @param cryptoContext : Context related to data to be verified.
+     * @param jceProvider   : JCE Provider used for verification.
      */
     public CryptoServiceBasedRSAVerifier(CryptoContext cryptoContext, String jceProvider) {
 
         this.jceProvider = jceProvider;
         this.cryptoContext = cryptoContext;
-        if (OAuth2ServiceComponentHolder.getCryptoService() != null) {
-            cryptoService = OAuth2ServiceComponentHolder.getCryptoService();
+        if (CryptoUtilDataHolder.getCryptoService() != null) {
+            cryptoService = CryptoUtilDataHolder.getCryptoService();
         }
     }
 
     /**
+     * Verify a given signature with given data using Carbon Crypto Service.
      *
-     * @param jwsHeader
-     * @param dataToBeVerified
-     * @param signature
+     * @param jwsHeader        : {@link JWSHeader}
+     * @param dataToBeVerified : Data that needs to be verified.
+     * @param signature        : Signature
      * @return
      * @throws JOSEException
      */
@@ -57,6 +58,7 @@ public class CryptoServiceBasedRSAVerifier implements JWSVerifier {
     }
 
     /**
+     * Returns the set of supported algorithms{@link JWSAlgorithm} by the CryptoServiceBasedRSAVerifier.
      *
      * @return
      */
