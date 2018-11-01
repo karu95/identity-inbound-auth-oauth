@@ -260,47 +260,15 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
                 throw new IdentityOAuth2Exception("Cannot resolve the tenant domain of the user.");
             }
 
-            int tenantId = IdentityTenantUtil.getTenantId(tenantDomain);
-
-            Key privateKey;
-            if (privateKeys.containsKey(tenantId)) {
-
-                // PrivateKey will not be null because containsKey() true says given key is exist and ConcurrentHashMap
-                // does not allow to store null values.
-                privateKey = privateKeys.get(tenantId);
+            if (signatureAlgorithm instanceof JWSAlgorithm) {
+                return ((SignedJWT) OAuth2Util.signJWTWithRSA(jwtClaimsSet,
+                        (JWSAlgorithm) signatureAlgorithm, tenantDomain)).serialize();
             } else {
-
-                // Get tenant's key store manager.
-                KeyStoreManager tenantKSM = KeyStoreManager.getInstance(tenantId);
-                if (MultitenantConstants.SUPER_TENANT_DOMAIN_NAME.equals(tenantDomain)) {
-                    try {
-                        privateKey = tenantKSM.getDefaultPrivateKey();
-                    } catch (Exception e) {
-                        throw new IdentityOAuth2Exception("Error while obtaining private key for super tenant", e);
-                    }
-                } else {
-
-                    // Derive key store name.
-                    String ksName = tenantDomain.trim().replace(".", "-");
-                    String jksName = ksName + KEY_STORE_EXTENSION;
-
-                    // Obtain private key.
-                    privateKey = tenantKSM.getPrivateKey(jksName, tenantDomain);
-                }
-
-                // Add the private key to the static concurrent hash map for later uses.
-                privateKeys.put(tenantId, privateKey);
+                String error = String.format("Provided %s algorithm as signature algorithm is not a JWSAlgorithm",
+                        signatureAlgorithm.getName());
+                throw new IdentityOAuth2Exception(error);
             }
-
-            JWSSigner signer = new RSASSASigner((RSAPrivateKey) privateKey);
-            JWSHeader.Builder headerBuilder = new JWSHeader.Builder((JWSAlgorithm) signatureAlgorithm);
-            String certThumbPrint = OAuth2Util.getThumbPrint(tenantDomain, tenantId);
-            headerBuilder.keyID(certThumbPrint);
-            headerBuilder.x509CertThumbprint(new Base64URL(certThumbPrint));
-            SignedJWT signedJWT = new SignedJWT(headerBuilder.build(), jwtClaimsSet);
-            signedJWT.sign(signer);
-            return signedJWT.serialize();
-        } catch (JOSEException | InvalidOAuthClientException e) {
+        } catch (InvalidOAuthClientException e) {
             throw new IdentityOAuth2Exception("Error occurred while signing JWT", e);
         }
     }
