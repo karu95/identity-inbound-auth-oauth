@@ -47,7 +47,7 @@ public class OAuthServiceProviderKeyResolver extends KeyResolver {
     private ServerConfigurationService serverConfigurationService;
 
     /**
-     * Constructor for {@link OAuthServiceProviderKeyResolver}
+     * Constructor for {@link OAuthServiceProviderKeyResolver}.
      *
      * @param serverConfigurationService
      */
@@ -69,7 +69,7 @@ public class OAuthServiceProviderKeyResolver extends KeyResolver {
      * Returns private key information related to given service provider context.
      *
      * @param cryptoContext : : Context information related private key that needs to be resolved.
-     * @return
+     * @return {@link PrivateKeyInfo} key alias and password of the related private key.
      */
     @Override
     public PrivateKeyInfo getPrivateKeyInfo(CryptoContext cryptoContext) {
@@ -88,10 +88,10 @@ public class OAuthServiceProviderKeyResolver extends KeyResolver {
     }
 
     /**
-     * Returns certificate and application ID related to the given {@link CryptoContext}
+     * Returns certificate and application ID related to the given {@link CryptoContext}.
      *
      * @param cryptoContext : Context information related certificate that needs to be resolved.
-     * @return
+     * @return {@link CertificateInfo} certicate and OAuth application ID.
      */
     @Override
     public CertificateInfo getCertificateInfo(CryptoContext cryptoContext) {

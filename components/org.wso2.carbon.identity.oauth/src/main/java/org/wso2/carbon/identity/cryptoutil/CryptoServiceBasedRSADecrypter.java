@@ -31,10 +31,10 @@ import org.wso2.carbon.crypto.api.CryptoService;
 import org.wso2.carbon.crypto.api.HybridEncryptionOutput;
 import org.wso2.carbon.identity.cryptoutil.internal.CryptoUtilDataHolder;
 
-import javax.crypto.spec.GCMParameterSpec;
 import java.nio.charset.Charset;
 import java.security.spec.AlgorithmParameterSpec;
 import java.util.Set;
+import javax.crypto.spec.GCMParameterSpec;
 
 /**
  * Implementation of {@link JWEDecrypter} based of Carbon Crypto Service.
@@ -113,7 +113,7 @@ public class CryptoServiceBasedRSADecrypter implements JWEDecrypter {
     }
 
     /**
-     * Returns set of asymmetric algorithms {@link JWEAlgorithm} supported by {@link CryptoServiceBasedRSAEncrypter}
+     * Returns set of asymmetric algorithms {@link JWEAlgorithm} supported by {@link CryptoServiceBasedRSAEncrypter}.
      *
      * @return set of supported {@link JWEAlgorithm}
      */
@@ -124,9 +124,9 @@ public class CryptoServiceBasedRSADecrypter implements JWEDecrypter {
     }
 
     /**
-     * Returns set of symmetric algorithms {@link EncryptionMethod} supported by {@link CryptoServiceBasedRSAEncrypter}
+     * Returns set of symmetric algorithms {@link EncryptionMethod} supported by {@link CryptoServiceBasedRSAEncrypter}.
      *
-     * @return
+     * @return set of {@link EncryptionMethod}.
      */
     @Override
     public Set<EncryptionMethod> supportedEncryptionMethods() {

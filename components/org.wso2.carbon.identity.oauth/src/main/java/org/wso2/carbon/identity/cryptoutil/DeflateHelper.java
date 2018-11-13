@@ -23,7 +23,9 @@ import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWEHeader;
 import com.nimbusds.jose.util.DeflateUtils;
 
-
+/**
+ *
+ */
 class DeflateHelper {
 
     DeflateHelper() {

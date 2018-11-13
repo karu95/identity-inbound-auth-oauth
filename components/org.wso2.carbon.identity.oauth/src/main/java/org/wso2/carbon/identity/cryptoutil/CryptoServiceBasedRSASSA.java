@@ -40,6 +40,7 @@ class CryptoServiceBasedRSASSA {
     }};
 
     private CryptoServiceBasedRSASSA() {
+
     }
 
     /**
@@ -71,11 +72,12 @@ class CryptoServiceBasedRSASSA {
     }
 
     /**
-     * Returns set of supported {@link JWSAlgorithm}
+     * Returns set of supported {@link JWSAlgorithm}.
      *
-     * @return
+     * @return set of supported sign verify algorithms by the implementation.
      */
     static Set<JWSAlgorithm> getSupportedAlgorithms() {
+
         return algorithms;
     }
 }

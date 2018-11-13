@@ -18,7 +18,6 @@
 
 package org.wso2.carbon.identity.cryptoutil.internal;
 
-
 import org.wso2.carbon.base.api.ServerConfigurationService;
 import org.wso2.carbon.crypto.api.CryptoService;
 
@@ -31,12 +30,13 @@ public class CryptoUtilDataHolder {
     private static CryptoService cryptoService;
 
     private CryptoUtilDataHolder() {
+
     }
 
     /**
-     * Getter of the {@link ServerConfigurationService}
+     * Getter of the carbon server configuration(carbon.xml).
      *
-     * @return
+     * @return {@link ServerConfigurationService}.
      */
     public static ServerConfigurationService getServerConfigurationService() {
 
@@ -49,9 +49,9 @@ public class CryptoUtilDataHolder {
     }
 
     /**
-     * Getter of the {@link CryptoService}
+     * Getter of the {@link CryptoService}.
      *
-     * @return
+     * @return {@link CryptoService}
      */
     public static CryptoService getCryptoService() {
 

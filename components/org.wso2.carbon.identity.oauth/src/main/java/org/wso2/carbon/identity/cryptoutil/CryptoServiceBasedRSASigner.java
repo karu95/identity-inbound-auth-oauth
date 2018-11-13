@@ -59,7 +59,7 @@ public class CryptoServiceBasedRSASigner implements JWSSigner {
      *
      * @param jwsHeader      : Header of the JWT.
      * @param dataToBeSigned : Data that needs to be signed.
-     * @return
+     * @return {@link Base64URL} of the signature.
      * @throws JOSEException
      */
     @Override
@@ -76,9 +76,9 @@ public class CryptoServiceBasedRSASigner implements JWSSigner {
     }
 
     /**
-     * Returns set of supported {@link JWSAlgorithm}
+     * Returns set of supported {@link JWSAlgorithm}.
      *
-     * @return
+     * @return set of supported algorithms.
      */
     @Override
     public Set<JWSAlgorithm> supportedJWSAlgorithms() {
@@ -88,6 +88,7 @@ public class CryptoServiceBasedRSASigner implements JWSSigner {
 
     @Override
     public JCAContext getJCAContext() {
+
         return null;
     }
 }

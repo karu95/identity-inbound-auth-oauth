@@ -60,11 +60,12 @@ public class CryptoServiceBasedRSAVerifier implements JWSVerifier {
      * @param jwsHeader        : {@link JWSHeader}
      * @param dataToBeVerified : Data that needs to be verified.
      * @param signature        : Signature
-     * @return
+     * @return true / false depending on the verification.
      * @throws JOSEException
      */
     @Override
     public boolean verify(JWSHeader jwsHeader, byte[] dataToBeVerified, Base64URL signature) throws JOSEException {
+
         String algorithm = CryptoServiceBasedRSASSA.getSignVerifyAlgorithm(jwsHeader.getAlgorithm());
         try {
             return cryptoService.verifySignature(dataToBeVerified, signature.decode(), algorithm, jceProvider, cryptoContext);
@@ -78,15 +79,17 @@ public class CryptoServiceBasedRSAVerifier implements JWSVerifier {
     /**
      * Returns the set of supported algorithms{@link JWSAlgorithm} by the CryptoServiceBasedRSAVerifier.
      *
-     * @return
+     * @return Set of {@link JWSAlgorithm} supported.
      */
     @Override
     public Set<JWSAlgorithm> supportedJWSAlgorithms() {
+
         return CryptoServiceBasedRSASSA.getSupportedAlgorithms();
     }
 
     @Override
     public JCAContext getJCAContext() {
+
         return null;
     }
 }
