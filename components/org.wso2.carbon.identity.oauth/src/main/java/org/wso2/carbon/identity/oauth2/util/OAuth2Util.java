@@ -1774,7 +1774,7 @@ public class OAuth2Util {
             if (isCryptoServiceEnabled()) {
                 CryptoService cryptoService = CryptoUtilDataHolder.getCryptoService();
                 publicCert = cryptoService.getCertificate(new CryptoContext(tenantId, spTenantDomain,
-                        "SERVICE-PROVIDER-OAUTH", clientId, null, null));
+                        "SERVICE-PROVIDER", clientId, null, null));
             } else {
                 publicCert = getX509CertOfOAuthApp(clientId, spTenantDomain);
             }
@@ -1796,7 +1796,7 @@ public class OAuth2Util {
             JWEEncrypter encrypter;
             if (isCryptoServiceEnabled()) {
                 encrypter = new CryptoServiceBasedRSAEncrypter(new CryptoContext(tenantId, spTenantDomain,
-                        "SERVICE-PROVIDER-OAUTH", clientId, null, null), "BC");
+                        "SERVICE-PROVIDER", clientId, null, null), "BC");
             } else {
                 encrypter = new RSAEncrypter((RSAPublicKey) publicKey);
             }

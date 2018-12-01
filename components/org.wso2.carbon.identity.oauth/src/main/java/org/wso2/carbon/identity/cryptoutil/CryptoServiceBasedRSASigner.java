@@ -24,6 +24,8 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.jca.JCAContext;
 import com.nimbusds.jose.util.Base64URL;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.crypto.api.CryptoContext;
 import org.wso2.carbon.crypto.api.CryptoException;
 import org.wso2.carbon.crypto.api.CryptoService;
@@ -36,6 +38,8 @@ import java.util.Set;
  * Instances of this class provides JWT signing using Carbon Crypto Service.
  */
 public class CryptoServiceBasedRSASigner implements JWSSigner {
+
+    private static Log log = LogFactory.getLog(CryptoServiceBasedRSASigner.class);
 
     private final CryptoContext cryptoContext;
     private final String jceProvider;
@@ -65,13 +69,17 @@ public class CryptoServiceBasedRSASigner implements JWSSigner {
     @Override
     public Base64URL sign(JWSHeader jwsHeader, byte[] dataToBeSigned) throws JOSEException {
 
+        logDebug(String.format("Signing JWT token with header : %s", jwsHeader.toJSONObject().toJSONString()));
         String algorithm = CryptoServiceBasedRSASSA.getSignVerifyAlgorithm(jwsHeader.getAlgorithm());
-
         try {
             return Base64URL.encode(cryptoService.sign(dataToBeSigned, algorithm, jceProvider, cryptoContext));
         } catch (CryptoException e) {
-            String errorMessage = "";
+            String errorMessage = String.format("Error occurred while signing JWT token using %s algorithm.",
+                    algorithm);
             throw new JOSEException(errorMessage, e);
+        } finally {
+            logDebug(String.format("Successfully signed JWT token with header : %s",
+                    jwsHeader.toJSONObject().toJSONString()));
         }
     }
 
@@ -90,5 +98,12 @@ public class CryptoServiceBasedRSASigner implements JWSSigner {
     public JCAContext getJCAContext() {
 
         return null;
+    }
+
+    private void logDebug(String message) {
+
+        if (log.isDebugEnabled()) {
+            log.debug(message);
+        }
     }
 }

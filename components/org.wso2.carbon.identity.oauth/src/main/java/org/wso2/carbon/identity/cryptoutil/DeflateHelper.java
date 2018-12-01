@@ -24,7 +24,7 @@ import com.nimbusds.jose.JWEHeader;
 import com.nimbusds.jose.util.DeflateUtils;
 
 /**
- *
+ * This class is used to compress and decompress JWT tokens.
  */
 class DeflateHelper {
 

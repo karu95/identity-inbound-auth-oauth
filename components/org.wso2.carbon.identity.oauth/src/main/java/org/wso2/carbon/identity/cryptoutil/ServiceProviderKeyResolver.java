@@ -39,19 +39,21 @@ import static org.wso2.carbon.base.MultitenantConstants.SUPER_TENANT_ID;
  * Extension of {@link KeyResolver}
  * Instances of this class resolves certificate and private key details related to OAuth service providers.
  */
-public class OAuthServiceProviderKeyResolver extends KeyResolver {
+public class ServiceProviderKeyResolver extends KeyResolver {
 
     private static final String PRIMARY_KEYSTORE_KEY_ALIAS_PROPERTY_PATH = "Security.KeyStore.KeyAlias";
     private static final String PRIMARY_KEYSTORE_KEY_PASSWORD_PROPERTY_PATH = "Security.KeyStore.KeyPassword";
-    private static Log log = LogFactory.getLog(OAuthServiceProviderKeyResolver.class);
+
+    private static Log log = LogFactory.getLog(ServiceProviderKeyResolver.class);
+
     private ServerConfigurationService serverConfigurationService;
 
     /**
-     * Constructor for {@link OAuthServiceProviderKeyResolver}.
+     * Constructor for {@link ServiceProviderKeyResolver}.
      *
-     * @param serverConfigurationService
+     * @param serverConfigurationService : carbon.xml configuration as a service.
      */
-    public OAuthServiceProviderKeyResolver(ServerConfigurationService serverConfigurationService) {
+    public ServiceProviderKeyResolver(ServerConfigurationService serverConfigurationService) {
 
         this.serverConfigurationService = serverConfigurationService;
     }
@@ -59,7 +61,7 @@ public class OAuthServiceProviderKeyResolver extends KeyResolver {
     @Override
     public boolean isApplicable(CryptoContext cryptoContext) {
 
-        if ((cryptoContext.getType() != null) && (cryptoContext.getType().equals("SERVICE-PROVIDER-OAUTH"))) {
+        if ((cryptoContext.getType() != null) && (cryptoContext.getType().equals("SERVICE-PROVIDER"))) {
             return true;
         }
         return false;
@@ -107,20 +109,25 @@ public class OAuthServiceProviderKeyResolver extends KeyResolver {
                 return new CertificateInfo(String.valueOf(serviceProvider.getApplicationID()),
                         IdentityUtil.convertPEMEncodedContentToCertificate(certificateContent));
             } else {
-                throw new IdentityOAuth2Exception("Public certificate not configured for Service Provider with " +
+               log.error("Public certificate not configured for Service Provider with " +
                         "client_id: " + clientId + " of tenantDomain: " + tenantDomain);
             }
-        } catch (IdentityOAuth2Exception | CertificateException e) {
+        } catch (CertificateException e) {
             String errorMessage = "Error while building X509 cert of oauth app with client_id: "
                     + clientId + " of tenantDomain: " + tenantDomain;
-            if (log.isDebugEnabled()) {
-                log.debug(new IdentityOAuth2Exception(errorMessage, e));
-            }
+            log.error(new IdentityOAuth2Exception(errorMessage, e));
 
-            if (log.isInfoEnabled()) {
-                log.info(errorMessage);
-            }
+        } catch (IdentityOAuth2Exception e) {
+            log.error(String.format("Error occurred while retrieving service provider with client id = %s",
+                    clientId));
         }
         return null;
+    }
+
+    private void logDebug(String message) {
+
+        if (log.isDebugEnabled()) {
+            log.debug(message);
+        }
     }
 }

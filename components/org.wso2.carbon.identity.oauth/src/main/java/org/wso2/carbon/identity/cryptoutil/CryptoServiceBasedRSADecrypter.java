@@ -25,6 +25,8 @@ import com.nimbusds.jose.JWEDecrypter;
 import com.nimbusds.jose.JWEHeader;
 import com.nimbusds.jose.jca.JWEJCAContext;
 import com.nimbusds.jose.util.Base64URL;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.crypto.api.CryptoContext;
 import org.wso2.carbon.crypto.api.CryptoException;
 import org.wso2.carbon.crypto.api.CryptoService;
@@ -41,6 +43,8 @@ import javax.crypto.spec.GCMParameterSpec;
  * Instances of this class provides JWT decryption using Carbon Crypto Service.
  */
 public class CryptoServiceBasedRSADecrypter implements JWEDecrypter {
+
+    private Log log = LogFactory.getLog(CryptoServiceBasedRSADecrypter.class);
 
     private CryptoContext cryptoContext;
     private String jceProvider;
@@ -86,6 +90,7 @@ public class CryptoServiceBasedRSADecrypter implements JWEDecrypter {
             throw new JOSEException("Missing JWE authentication tag");
         }
 
+        logDebug(String.format("Decrypting JWT token with header : %s", jweHeader.toJSONObject().toJSONString()));
         String asymmetricAlgorithm = CipherHelper.resolveAsymmetricAlgorithm(jweHeader.getAlgorithm());
         String symmetricAlgorithm = CipherHelper.resolveSymmetricAlgorithm(jweHeader.getEncryptionMethod());
 
@@ -109,6 +114,9 @@ public class CryptoServiceBasedRSADecrypter implements JWEDecrypter {
             String errorMessage = String.format("Error occurred while hybrid decrypting JWT using " +
                     "symmetric algorithm '%s' and asymmetric algorithm '%s'.", symmetricAlgorithm, asymmetricAlgorithm);
             throw new JOSEException(errorMessage, e);
+        } finally {
+            logDebug(String.format("Successfully decrypted the JWT token with header : %s",
+                    jweHeader.toJSONObject().toJSONString()));
         }
     }
 
@@ -143,5 +151,12 @@ public class CryptoServiceBasedRSADecrypter implements JWEDecrypter {
     private byte[] computeAAD(JWEHeader header) {
 
         return header.toBase64URL().toString().getBytes(Charset.forName("ASCII"));
+    }
+
+    private void logDebug(String message) {
+
+        if (log.isDebugEnabled()) {
+            log.debug(message);
+        }
     }
 }

@@ -26,6 +26,8 @@ import com.nimbusds.jose.JWEEncrypter;
 import com.nimbusds.jose.JWEHeader;
 import com.nimbusds.jose.jca.JWEJCAContext;
 import com.nimbusds.jose.util.Base64URL;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.crypto.api.CryptoContext;
 import org.wso2.carbon.crypto.api.CryptoException;
 import org.wso2.carbon.crypto.api.CryptoService;
@@ -42,6 +44,8 @@ import javax.crypto.spec.GCMParameterSpec;
  * Instances of this class provides JWT encryption using Carbon Crypto Service.
  */
 public class CryptoServiceBasedRSAEncrypter implements JWEEncrypter {
+
+    private static Log log = LogFactory.getLog(CryptoServiceBasedRSAEncrypter.class);
 
     private final CryptoContext cryptoContext;
     private final String jceProvider;
@@ -71,6 +75,7 @@ public class CryptoServiceBasedRSAEncrypter implements JWEEncrypter {
     @Override
     public JWECryptoParts encrypt(JWEHeader jweHeader, byte[] clearText) throws JOSEException {
 
+        logDebug(String.format("Encrypting JWT token with header : %s", jweHeader.toJSONObject().toJSONString()));
         String symmetricAlgorithm = CipherHelper.resolveSymmetricAlgorithm(jweHeader.getEncryptionMethod());
         String asymmetricAlgorithm = CipherHelper.resolveAsymmetricAlgorithm(jweHeader.getAlgorithm());
         byte[] plainText = DeflateHelper.applyCompression(jweHeader, clearText);
@@ -79,12 +84,14 @@ public class CryptoServiceBasedRSAEncrypter implements JWEEncrypter {
             if (symmetricAlgorithm.contains("GCM")) {
                 encryptionOutput = cryptoService.hybridEncrypt(new HybridEncryptionInput(plainText,
                         computeAAD(jweHeader)), symmetricAlgorithm, asymmetricAlgorithm, jceProvider, cryptoContext);
+                logDebug("Successfully encrypted the JWT token.");
             } else {
-                String errorMessage = "";
+                String errorMessage = String.format("Symmetric algorithm '%s' is not supported.", symmetricAlgorithm);
                 throw new JOSEException(errorMessage);
             }
         } catch (CryptoException e) {
-            String errorMessage = "";
+            String errorMessage = String.format("Error occurred while encrypting the JWT token using %s symmetric " +
+                            "algorithm and %s asymmetric algorithm.", symmetricAlgorithm, asymmetricAlgorithm);
             throw new JOSEException(errorMessage, e);
         }
 
@@ -94,7 +101,8 @@ public class CryptoServiceBasedRSAEncrypter implements JWEEncrypter {
         if (encryptionOutput.getParameterSpec() instanceof GCMParameterSpec) {
             iv = Base64URL.encode(((GCMParameterSpec) encryptionOutput.getParameterSpec()).getIV());
         } else {
-            String errorMessage = "";
+            String errorMessage = String.format("Invalid algorithm parameter specification for '%' symmetric " +
+                    "algorithm.", symmetricAlgorithm);
             throw new JOSEException(errorMessage);
         }
 
@@ -139,5 +147,12 @@ public class CryptoServiceBasedRSAEncrypter implements JWEEncrypter {
     private byte[] computeAAD(JWEHeader header) {
 
         return header.toBase64URL().toString().getBytes(Charset.forName("ASCII"));
+    }
+
+    private void logDebug(String message) {
+
+        if (log.isDebugEnabled()) {
+            log.debug(message);
+        }
     }
 }

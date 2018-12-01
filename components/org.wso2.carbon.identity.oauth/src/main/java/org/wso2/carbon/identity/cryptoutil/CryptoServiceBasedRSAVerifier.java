@@ -24,6 +24,8 @@ import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.jca.JCAContext;
 import com.nimbusds.jose.util.Base64URL;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.wso2.carbon.crypto.api.CryptoContext;
 import org.wso2.carbon.crypto.api.CryptoException;
 import org.wso2.carbon.crypto.api.CryptoService;
@@ -36,6 +38,8 @@ import java.util.Set;
  * Instances of this class provides JWT verification using Carbon Crypto Service.
  */
 public class CryptoServiceBasedRSAVerifier implements JWSVerifier {
+
+    private static Log log = LogFactory.getLog(CryptoServiceBasedRSAVerifier.class);
 
     private final CryptoContext cryptoContext;
     private final String jceProvider;
@@ -66,6 +70,7 @@ public class CryptoServiceBasedRSAVerifier implements JWSVerifier {
     @Override
     public boolean verify(JWSHeader jwsHeader, byte[] dataToBeVerified, Base64URL signature) throws JOSEException {
 
+        logDebug(String.format("Signing JWT token with header : %s", jwsHeader.toJSONObject().toJSONString()));
         String algorithm = CryptoServiceBasedRSASSA.getSignVerifyAlgorithm(jwsHeader.getAlgorithm());
         try {
             return cryptoService.verifySignature(dataToBeVerified, signature.decode(), algorithm, jceProvider, cryptoContext);
@@ -73,6 +78,9 @@ public class CryptoServiceBasedRSAVerifier implements JWSVerifier {
             String errorMessage = String.format("Error occurred while verifying JWT signature using '%s' algorithm",
                     algorithm);
             throw new JOSEException(errorMessage, e);
+        } finally {
+            logDebug(String.format("Successfully signed JWT token with header : %s",
+                    jwsHeader.toJSONObject().toJSONString()));
         }
     }
 
@@ -91,5 +99,12 @@ public class CryptoServiceBasedRSAVerifier implements JWSVerifier {
     public JCAContext getJCAContext() {
 
         return null;
+    }
+
+    private void logDebug(String message) {
+
+        if (log.isDebugEnabled()) {
+            log.debug(message);
+        }
     }
 }

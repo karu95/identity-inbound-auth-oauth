@@ -32,7 +32,7 @@ import org.osgi.service.component.annotations.ReferencePolicy;
 import org.wso2.carbon.base.api.ServerConfigurationService;
 import org.wso2.carbon.crypto.api.CryptoService;
 import org.wso2.carbon.crypto.api.KeyResolver;
-import org.wso2.carbon.identity.cryptoutil.OAuthServiceProviderKeyResolver;
+import org.wso2.carbon.identity.cryptoutil.ServiceProviderKeyResolver;
 
 @Component(
         name = "identity.cryptoutil.component",
@@ -42,18 +42,18 @@ public class CryptoUtilComponent {
 
     private static Log log = LogFactory.getLog(CryptoUtilComponent.class);
 
-    private ServiceRegistration<KeyResolver> oauthKeyResolverServiceRegistration;
+    private ServiceRegistration<KeyResolver> serviceProviderKeyResolverServiceRegistration;
 
     @Activate
     protected void activate(ComponentContext componentContext) {
 
         try {
             BundleContext bundleContext = componentContext.getBundleContext();
-            KeyResolver oauthKeyResolver = new OAuthServiceProviderKeyResolver(CryptoUtilDataHolder.getServerConfigurationService());
-            oauthKeyResolverServiceRegistration = bundleContext.registerService(KeyResolver.class, oauthKeyResolver,
+            KeyResolver oauthKeyResolver = new ServiceProviderKeyResolver(CryptoUtilDataHolder.getServerConfigurationService());
+            serviceProviderKeyResolverServiceRegistration = bundleContext.registerService(KeyResolver.class, oauthKeyResolver,
                     null);
             if (log.isInfoEnabled()) {
-                String message = String.format("'%s' activated successfully.", OAuthServiceProviderKeyResolver.class);
+                String message = String.format("'%s' activated successfully.", ServiceProviderKeyResolver.class);
                 log.info(message);
             }
         } catch (Throwable e) {
@@ -67,7 +67,7 @@ public class CryptoUtilComponent {
     @Deactivate
     protected void deactivate(ComponentContext componentContext) {
 
-        oauthKeyResolverServiceRegistration.unregister();
+        serviceProviderKeyResolverServiceRegistration.unregister();
     }
 
     protected void unsetServerConfigurationService(ServerConfigurationService serverConfigurationService) {
